@@ -1,0 +1,37 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>시청자</title>
+<body style="background:#0b1020;color:#eaf0ff;font-family:sans-serif">
+<h2>방송 시청</h2>
+<label>Room: <input id="room" value="broadcast"></label>
+<button id="join">시청 시작</button>
+<video id="v" autoplay playsinline controls style="width:100%;max-width:960px;background:#000;border-radius:12px"></video>
+<p id="log"></p>
+<script type="module">
+import { Room } from "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.esm.js";
+const log = m => document.getElementById('log').textContent = m;
+
+async function getToken(){
+  const room = document.getElementById('room').value || "broadcast";
+  const r = await fetch("http://localhost:3000/token/viewer", {
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ room, name: "viewer-"+Math.random().toString(36).slice(2) })
+  });
+  return r.json();
+}
+
+document.getElementById('join').onclick = async () => {
+  try {
+    const { url, token } = await getToken();
+    const room = new Room({ adaptiveStream:true });
+    await room.connect(url, token);
+    const videoEl = document.getElementById('v');
+
+    room.on("trackSubscribed", (track) => {
+      if (track.kind === "video") track.attach(videoEl);
+      if (track.kind === "audio") track.attach(videoEl);
+    });
+    log("시청 중… (네트워크에 맞춰 자동 품질 조정)");
+  } catch(e){ log("오류: "+e.message); }
+};
+</script>
+</body>
