@@ -3,7 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import "dotenv/config";
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken } from "livekit-token-server";
 
 /**
  * 환경변수 확인
