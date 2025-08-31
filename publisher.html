@@ -1,0 +1,40 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>화면공유 발신</title>
+<body style="background:#0b1020;color:#eaf0ff;font-family:sans-serif">
+<h2>화면공유 발신(1:N)</h2>
+<label>Room: <input id="room" value="broadcast"></label>
+<button id="start">화면공유 시작</button>
+<p id="log"></p>
+<script type="module">
+import { Room, Track, VideoPresets } from "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.esm.js";
+const log = m => document.getElementById('log').textContent = m;
+
+async function getToken(publish){
+  const room = document.getElementById('room').value || "broadcast";
+  const r = await fetch("http://localhost:3000/token/host", {
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ room, name:"host" })
+  });
+  return r.json();
+}
+
+document.getElementById('start').onclick = async () => {
+  try {
+    const { url, token } = await getToken(true);
+    const room = new Room({ adaptiveStream:true, dynacast:true });
+    await room.connect(url, token);
+
+    const display = await navigator.mediaDevices.getDisplayMedia({ video:true, audio:true });
+    const vTrack = new Track.LocalVideoTrack(display.getVideoTracks()[0]);
+    await room.localParticipant.publishTrack(vTrack, { simulcast:true, videoEncoding: VideoPresets.h720.encoding });
+
+    if (display.getAudioTracks().length){
+      const aTrack = new Track.LocalAudioTrack(display.getAudioTracks()[0]);
+      await room.localParticipant.publishTrack(aTrack);
+    }
+    log("송출 중… 창/탭 공유 종료 시 자동 종료됩니다.");
+    display.getVideoTracks()[0].addEventListener('ended', () => { room.disconnect(); log("종료됨"); });
+  } catch(e){ log("오류: "+e.message); }
+};
+</script>
+</body>
